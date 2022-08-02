@@ -414,9 +414,11 @@ class BaseAviary(BenchmarkEnv):
         forces = np.array(rpm**2) * self.KF
         torques = np.array(rpm**2) * self.KM
         z_torque = (-torques[0] + torques[1] - torques[2] + torques[3])
+        # z_torque = (torques[0] - torques[1] + torques[2] - torques[3])
+
         for i in range(4):
             p.applyExternalForce(self.DRONE_IDS[nth_drone],
-                                 i,
+                                 3-i,
                                  forceObj=[0, 0, forces[i]],
                                  posObj=[0, 0, 0],
                                  flags=p.LINK_FRAME,
@@ -456,7 +458,7 @@ class BaseAviary(BenchmarkEnv):
                 self.rpy[nth_drone, 1]) < np.pi / 2:
             for i in range(4):
                 p.applyExternalForce(self.DRONE_IDS[nth_drone],
-                                     i,
+                                     3-i,
                                      forceObj=[0, 0, gnd_effects[i]],
                                      posObj=[0, 0, 0],
                                      flags=p.LINK_FRAME,
@@ -535,7 +537,8 @@ class BaseAviary(BenchmarkEnv):
         thrust_world_frame = np.dot(rotation, thrust)
         force_world_frame = thrust_world_frame - np.array([0, 0, self.GRAVITY])
         z_torques = np.array(rpm**2) * self.KM
-        z_torque = (-z_torques[0] + z_torques[1] - z_torques[2] + z_torques[3])
+        # z_torque = (-z_torques[0] + z_torques[1] - z_torques[2] + z_torques[3])
+        z_torque = (z_torques[0] -z_torques[1] + z_torques[2] - z_torques[3])
         if self.DRONE_MODEL == DroneModel.CF2X:
             x_torque = (forces[0] + forces[1] - forces[2]
                         - forces[3]) * (self.L / np.sqrt(2))

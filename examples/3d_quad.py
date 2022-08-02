@@ -25,7 +25,7 @@ def main():
     """
     # Set iterations and episode counter.
     num_episodes = 1
-    ITERATIONS = int(1000)
+    ITERATIONS = int(2500)
     # Start a timer.
     START = time.time()
 
@@ -67,43 +67,50 @@ def main():
     # plt.show()
 
     # Plot in 3D.
-    ax = plt.axes(projection='3d')
-    ax.plot3D(ref_x, ref_y, ref_z)
-    ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
-    plt.show()
+    # ax = plt.axes(projection='3d')
+    # ax.plot3D(ref_x, ref_y, ref_z)
+    # ax.scatter3D(waypoints[:,0], waypoints[:,1], waypoints[:,2])
+    # plt.show()
 
-    for i in range(10, ref_x.shape[0], 10):
-        p.addUserDebugLine(lineFromXYZ=[ref_x[i-10], ref_y[i-10], ref_z[i-10]],
-                           lineToXYZ=[ref_x[i], ref_y[i], ref_z[i]],
-                           lineColorRGB=[1, 0, 0],
-                           physicsClientId=env.PYB_CLIENT)
+    # for i in range(10, ref_x.shape[0], 10):
+    #     p.addUserDebugLine(lineFromXYZ=[ref_x[i-10], ref_y[i-10], ref_z[i-10]],
+    #                        lineToXYZ=[ref_x[i], ref_y[i], ref_z[i]],
+    #                        lineColorRGB=[1, 0, 0],
+    #                        physicsClientId=env.PYB_CLIENT)
 
-    for point in waypoints:
-        p.loadURDF(os.path.join(env.URDF_DIR, "gate.urdf"),
-                   [point[0], point[1], point[2]-0.05],
-                   p.getQuaternionFromEuler([0,0,0]),
-                   physicsClientId=env.PYB_CLIENT)
+    # for point in waypoints:
+    #     p.loadURDF(os.path.join(env.URDF_DIR, "gate.urdf"),
+    #                [point[0], point[1], point[2]-0.05],
+    #                p.getQuaternionFromEuler([0,0,0]),
+    #                physicsClientId=env.PYB_CLIENT)
 
+    actions = []
     # Run an experiment.
     for i in range(ITERATIONS):
-
+        # if i < 500:
+        #     target = np.array([0, 0, 0])
+        if i < 1500:
+            target = np.array([0, 0, 1])
+        else:
+            target = np.array([0, 1, 1])
         # Step by keyboard input
         # _ = input('Press any key to continue.')
 
         # Sample a random action.
         if i == 0:
-            action = env.action_space.sample()
+            action = [0, 0, 0, 0] #env.action_space.sample()
         else:
             rpms, _, _ = ctrl.compute_control(control_timestep=env.CTRL_TIMESTEP,
                         cur_pos=np.array([obs[0],obs[2],obs[4]]),
                         cur_quat=np.array(p.getQuaternionFromEuler([obs[6],obs[7],obs[8]])),
                         cur_vel=np.array([obs[1],obs[3],obs[5]]),
                         cur_ang_vel=np.array([obs[9],obs[10],obs[11]]),
-                        target_pos=np.array([ref_x[i], ref_y[i], ref_z[i]]),
+                        target_pos=target,
                         target_vel=np.zeros(3)
                         )
             action = rpms
             action = env.KF * action**2
+        actions += [action]
 
         # Step the environment and print all returned information.
         obs, reward, done, info = env.step(action)
@@ -124,12 +131,12 @@ def main():
             print(out)
 
         # If an episode is complete, reset the environment.
-        if done:
-            num_episodes += 1
-            new_initial_obs, new_initial_info = env.reset()
-            print(str(num_episodes)+'-th reset.', 7)
-            print('Reset obs' + str(new_initial_obs), 2)
-            print('Reset info' + str(new_initial_info), 0)
+        # if done:
+        #     num_episodes += 1
+        #     new_initial_obs, new_initial_info = env.reset()
+        #     print(str(num_episodes)+'-th reset.', 7)
+        #     print('Reset obs' + str(new_initial_obs), 2)
+        #     print('Reset info' + str(new_initial_info), 0)
 
     # Close the environment and print timing statistics.
     env.close()
@@ -137,6 +144,18 @@ def main():
     out = str("\n{:d} iterations (@{:d}Hz) and {:d} episodes in {:.2f} seconds, i.e. {:.2f} steps/sec for a {:.2f}x speedup.\n\n"
           .format(ITERATIONS, env.CTRL_FREQ, num_episodes, elapsed_sec, ITERATIONS/elapsed_sec, (ITERATIONS*env.CTRL_TIMESTEP)/elapsed_sec))
     print(out)
+
+    actions = np.array(actions)
+    timesteps = np.array(list(range(len(actions))))
+    fig = plt.figure(figsize=(9, 9))
+    ax = fig.add_subplot(111)
+    ax.plot(timesteps, actions[:,0], label='FL')
+    ax.plot(timesteps, actions[:,1], label='BL')
+    ax.plot(timesteps, actions[:,2], label='BR')
+    ax.plot(timesteps, actions[:,3], label='FR')
+    ax.legend()
+
+    plt.show()
 
 
 if __name__ == "__main__":
